@@ -28,12 +28,12 @@ object Owner {
       message match {
         case SendNextItem(replyTo) =>
           if (items.isEmpty) {
-            return Behaviors.stopped
+            Behaviors.stopped
           } else {
             val remainderItems :+ last = items
             println("Comenzar a subastar item " + last)
             replyTo ! AuctionItem(last, context.self)
-            return sendItem(remainderItems)
+            sendItem(remainderItems)
           }
       }
     }
