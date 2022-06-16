@@ -5,7 +5,7 @@ import akka.actor.typed.scaladsl.Behaviors
 
 object Main {
 
-  val itemsList: List[String] = List("Product1", "Product2", "Product3", "Product4")
+  val itemsList: List[String] = List("Product1", "Product2")
 
   def main(args: Array[String]): Unit = {
     ActorSystem(Main(), "ChatRoomDemo")
