@@ -24,6 +24,5 @@ object Room {
         println("Room " + id + ": Finalizo ejecución")
         Behaviors.stopped
     }
-  }
-  }
+  }}
 }
