@@ -1,4 +1,4 @@
-import Owner.SendNextItem
+import Owner.{OwnerCommand, SendNextItem}
 import Room.RoomCommand
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
@@ -11,7 +11,8 @@ class RoomSession(id: Int) {
 
 object Room {
   sealed trait RoomCommand
-  final case class AuctionItem(item: String, replyTo: ActorRef[SendNextItem]) extends RoomCommand
+  final case class AuctionItem(item: String, replyTo: ActorRef[OwnerCommand]) extends RoomCommand
+  final case class NoMoreItems() extends RoomCommand
 
   def apply(id: Int): Behavior[RoomCommand] = Behaviors.receive { (context, message) => {
     message match {
@@ -19,6 +20,9 @@ object Room {
         println("Room " + id + ": Subasté item  " + item)
         owner ! SendNextItem(context.self)
         Behaviors.same
+      case NoMoreItems() =>
+        println("Room " + id + ": Finalizo ejecución")
+        Behaviors.stopped
     }
   }
   }
