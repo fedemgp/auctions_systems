@@ -6,6 +6,7 @@ object Owner {
   // private final case class PublishSessionMessage(screenName: String, message: String) extends RoomCommand
 
   sealed trait OwnerCommand
+
   final case class SendNextItem(replyTo: ActorRef[RoomCommand]) extends OwnerCommand
 
   def apply(items: List[Item], desiredRooms: Int): Behavior[OwnerCommand] = {
