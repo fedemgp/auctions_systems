@@ -1,7 +1,5 @@
-import Room.{AuctionItem, NoMoreItems, RoomCommand}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.actor.typed.{ActorRef, Behavior, Terminated}
-import akka.NotUsed
+import akka.actor.typed.{ActorRef, Behavior}
 
 object Owner {
 
@@ -10,7 +8,7 @@ object Owner {
   sealed trait OwnerCommand
   final case class SendNextItem(replyTo: ActorRef[RoomCommand]) extends OwnerCommand
 
-  def apply(items: List[String], desiredRooms: Int): Behavior[OwnerCommand] = {
+  def apply(items: List[Item], desiredRooms: Int): Behavior[OwnerCommand] = {
     Behaviors.setup { context =>
       val (remainingItems, createdRooms) = spawnRooms(desiredRooms, items, context)
       if (remainingItems.isEmpty) {
@@ -21,7 +19,7 @@ object Owner {
     }
   }
 
-  def spawnRooms(rooms: Int, items: List[String], context: ActorContext[OwnerCommand]): (List[String], Int) = {
+  def spawnRooms(rooms: Int, items: List[Item], context: ActorContext[OwnerCommand]): (List[Item], Int) = {
     /**
      * Lanza las salas que subastarán los items. Se lanzará el mínimo entre la cantidad de salas pedidas
      * y la cantidad de items a subastar (si items < salas, se crean len(items) salas ya que no se necesitan mas).
@@ -29,17 +27,17 @@ object Owner {
      * Retorna los items que quedan para subastar
      */
     var currentItems = items
-    var neededRooms = Math.min(rooms, items.length)
+    val neededRooms = Math.min(rooms, items.length)
     for (room <- 1 to neededRooms) {
-      val roomMailBox = context.spawn(new RoomSession(room)(), "room" + room)
+      val roomMailBox = context.spawn(new RoomSession(room, context.self).start(), "room" + room)
       val init :+ last = currentItems
-      roomMailBox ! AuctionItem(last, context.self)
+      roomMailBox ! AuctionItem(last)
       currentItems = init
     }
     (currentItems, neededRooms)
   }
 
-  def sendItem(items: List[String], rooms: Int): Behavior[OwnerCommand] = {
+  def sendItem(items: List[Item], rooms: Int): Behavior[OwnerCommand] = {
     /**
      * Mientras queden items a subastar, este comportamiento escucha mensajes de tipo SendNextItem, enviandolé a las
      * salas que lo soliciten el siguiente item a subastar. Cuando se quede sin items a subastar, enviará
@@ -50,7 +48,7 @@ object Owner {
         case SendNextItem(replyTo) =>
           if (items.nonEmpty) {
             val remainderItems :+ last = items
-            replyTo ! AuctionItem(last, context.self)
+            replyTo ! AuctionItem(last)
             sendItem(remainderItems, rooms)
           } else {
             replyTo ! NoMoreItems()
