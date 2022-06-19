@@ -1,1 +1,1 @@
-class Item(name: String, value: Int){}
+class Item(val name: String, val value: Int) {}

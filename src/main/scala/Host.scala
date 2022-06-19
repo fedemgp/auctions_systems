@@ -1,22 +1,30 @@
 import Client.{AuctionEnded, ClientCommand, ItemAt, StartingOfferOfItemAt}
-import Owner.SendNextItem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
 object Host {
   sealed trait HostCommand
+
   final case class AuctionItemWithThisClients(item: Item, clients: List[ActorRef[ClientCommand]]) extends HostCommand
-  final case class ItemOffer(value: Int, clients: List[ActorRef[ClientCommand]]) extends HostCommand
+
+  final case class ItemOffer(value: Int, whichClientOffered: ActorRef[ClientCommand]) extends HostCommand
+
   final case class CloseAuction() extends HostCommand
 
-  def apply(room: ActorRef[RoomCommand]): Behavior[HostCommand] = Behaviors.receive {
+  sealed trait AuctionCommand
+
+  def apply(room: ActorRef[RoomCommand]): Behavior[HostCommand] =
+    host(room, 0, List.empty)
+
+  def host(room: ActorRef[RoomCommand], auctionsHosted: Int, clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
     (context, message) => {
       message match {
-        case AuctionItemWithThisClients(item, clients) =>
-          clients.foreach(_ ! StartingOfferOfItemAt(item, context.self))
-          Behaviors.same
-
-        case ItemOffer(newValue, clients: List[ActorRef[ClientCommand]]) =>
+        case AuctionItemWithThisClients(item, newClients) =>
+          newClients.foreach(_ ! StartingOfferOfItemAt(item, context.self))
+          // podria spawnearse en un child actor con otros behaviours, pero bueno XD
+          val nextAuctionNumber = auctionsHosted + 1
+          host(room, nextAuctionNumber, newClients)
+        case ItemOffer(newValue, whichClientOffered) =>
           // TODO: agregar corte por tiemout
           if (newValue > 50) {
             // TODO: notificarle quien ganó?
@@ -27,10 +35,11 @@ object Host {
           } else {
             clients.foreach(_ ! ItemAt(newValue, context.self))
           }
-          Behaviors.same
-
+          host(room, auctionsHosted, clients)
         case CloseAuction() =>
-          Behaviors.stopped
+          room ! FinishedSession()
+          // si hacemos stop aca no hay mas host, o no?
+          Behaviors.same
       }
     }
   }
