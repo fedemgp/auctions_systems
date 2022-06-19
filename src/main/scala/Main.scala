@@ -5,7 +5,11 @@ import akka.actor.typed.scaladsl.Behaviors
 
 object Main {
 
-  val itemsList: List[String] = List("Product1", "Product2")
+  val itemsList: List[Item] = List(
+    new Item("Product1", 100),
+    new Item("Product2", 200),
+    new Item("Product3", 10),
+    new Item("Product4", 15))
 
   def main(args: Array[String]): Unit = {
     ActorSystem(Main(), "ChatRoomDemo")
