@@ -8,20 +8,18 @@ object Client {
   sealed trait ClientCommand
 
   final case class StartingOfferOfItemAt(item: Item, replyTo: ActorRef[HostCommand]) extends ClientCommand
-
-  final case class ItemAt(value: Int, replyTo: ActorRef[HostCommand]) extends ClientCommand
-
+  final case class ItemAt(newValue: Int, replyTo: ActorRef[HostCommand]) extends ClientCommand
   final case class AuctionEnded() extends ClientCommand
 
   def apply(clientId: Int, roomId: Int): Behavior[ClientCommand] = {
-    val rnd = new Random()
+    //val rnd = new Random()
     // TODO: refactor randomization
-    val budget = rnd.between(10, 300)
-    offerLogic(clientId, roomId, budget, rnd)
+    //val budget = rnd.between(10, 300)
+    offerLogic(clientId, roomId, 100 * clientId, 10)
   }
 
   // le paso el random para no romper las bolas con la seed
-  def offerLogic(clientId: Int, roomId: Int, budget: Int, rng: Random): Behavior[ClientCommand] = Behaviors.receive {
+  def offerLogic(clientId: Int, roomId: Int, budget: Int, betDelta: Int): Behavior[ClientCommand] = Behaviors.receive {
     (context, message) => {
       message match {
         case StartingOfferOfItemAt(item, host) =>
@@ -33,26 +31,28 @@ object Client {
             println(f"[CLIENT $clientId, from room: $roomId] item ${item.name} is too expensive, i won't offer this")
             Behaviors.stopped
           }
-
-          sendRandomOffer(roomId, budget, rng, context, host)
-          offerLogic(clientId, roomId, budget, rng)
+          host ! ItemOffer(item.value + betDelta, context.self)
+          //sendRandomOffer(roomId, budget, rng, context, host)
+          offerLogic(clientId, roomId, budget, betDelta)
         case ItemAt(value, host) =>
           println(f"[CLIENT $clientId, from room: $roomId] new item value is $value")
           // 5% chance of randomly giving up
-          val giveUp = rng.nextFloat() > 0.95
-          if (value > budget || giveUp) {
+          //val giveUp = rng.nextFloat() > 0.95
+          if (value > budget) {
             println(f"[CLIENT $clientId, from room: $roomId] i won't continue offering this")
             Behaviors.stopped
           }
-          sendRandomOffer(budget, value, rng, context, host)
-          offerLogic(clientId, roomId, budget, rng)
+          val newOffer = value + betDelta
+          host ! ItemOffer(newOffer, context.self)
+          //sendRandomOffer(budget, value, rng, context, host)
+          offerLogic(clientId, roomId, budget, betDelta)
         case AuctionEnded() =>
           println(f"[CLIENT $clientId, from room: $roomId] auction ended")
-          Behaviors.same
+          Behaviors.stopped
       }
     }
   }
-
+/** Commented for now to be able to make an entire deterministic execution
   // TODO: aca si vendria bien POO...
   private def sendRandomOffer(budget: Int,
                               value: Int,
@@ -75,5 +75,5 @@ object Client {
     }
     None
   }
-
+*/
 }

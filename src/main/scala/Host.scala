@@ -18,23 +18,41 @@ object Host {
           newClients.foreach(_ ! StartingOfferOfItemAt(item, context.self))
           // podria spawnearse en un child actor con otros behaviours, pero bueno XD
           val nextAuctionNumber = auctionsHosted + 1
-          host(room, nextAuctionNumber, newClients)
-        case ItemOffer(newValue, whichClientOffered) =>
-          // TODO: agregar corte por tiemout
-          if (newValue > 50) {
-            // TODO: notificarle quien ganó?
-            println("Tenemos un ganador!")
-            // Last send to close all clients
-            clients.foreach(_ ! AuctionEnded())
-            room ! FinishedSession()
-          } else {
-            clients.foreach(_ ! ItemAt(newValue, context.self))
-          }
-          host(room, auctionsHosted, clients)
+          auctionWithItemAndValue(item, item.value, auctionsHosted, room, newClients)
         case CloseAuction() =>
           // Este mensaje le llega del room cuando no hay mas items, y debe cerrarse el host
           Behaviors.stopped
       }
     }
   }
+  // TODO: separarlo en dos chld actors distintos, uno que hable con el room y otro con el cliente
+  // TODO 2: este metodo debe tener una referencia al que hizo la oferta anterior para compararlo con withClientOffered
+  //         e ignorar dos aumentos consecutivos del mismo
+  def auctionWithItemAndValue(item: Item, oldValue: Int, auctionsHosted: Int, room: ActorRef[RoomCommand],
+                              clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
+    (context, message) => {
+      message match {
+        case ItemOffer(newValue, whichClientOffered) =>
+          // If the bet is not higher ignore it
+          if (newValue <= oldValue) {
+            println(f"[Host] Repeated offer with value $newValue (old value $oldValue)")
+            return auctionWithItemAndValue(item, oldValue, auctionsHosted, room, clients)
+          }
+
+          // TODO: agregar corte por tiemout
+          if (newValue > 120) {
+            // TODO: notificarle quien ganó?
+            println("[Host] We have a winner!")
+            // Last send to close all clients
+            clients.foreach(_ ! AuctionEnded())
+            room ! FinishedSession()
+            host(room, auctionsHosted, clients)
+          } else {
+            println(f"[Host] New offer of $newValue")
+            clients.foreach(_ ! ItemAt(newValue, context.self))
+            auctionWithItemAndValue(item, newValue, auctionsHosted, room, clients)
+          }
+      }
+    }
+    }
 }

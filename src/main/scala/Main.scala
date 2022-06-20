@@ -7,9 +7,7 @@ object Main {
 
   val itemsList: List[Item] = List(
     new Item("Product1", 100),
-    new Item("Product2", 200),
-    new Item("Product3", 10),
-    new Item("Product4", 15))
+    new Item("Product2", 50))
 
   def main(args: Array[String]): Unit = {
     ActorSystem(Main(), "ChatRoomDemo")
@@ -17,7 +15,7 @@ object Main {
 
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
-      val owner = context.spawn(Owner(itemsList, 3), "Owner")
+      val owner = context.spawn(Owner(itemsList, 1), "Owner")
       context.watch(owner)
 
       Behaviors.receiveSignal {

@@ -7,9 +7,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 sealed trait RoomCommand
 
 final case class AuctionItem(item: Item) extends RoomCommand
-
 final case class NoMoreItems() extends RoomCommand
-
 final case class FinishedSession() extends RoomCommand
 
 class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand]) {
@@ -26,7 +24,7 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand]) {
         case AuctionItem(item) =>
           println(f"Room $id: Subasté item ${item.name} ")
           // TODO: hacer N clientes random?
-          val clients = spawnClients(10, List.empty, context)
+          val clients = spawnClients(2, List.empty, context)
           host ! AuctionItemWithThisClients(item, clients)
           Behaviors.same
         case FinishedSession() =>
