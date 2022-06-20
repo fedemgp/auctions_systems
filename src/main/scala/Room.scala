@@ -1,5 +1,5 @@
 import Client.ClientCommand
-import Host.AuctionItemWithThisClients
+import Host.{AuctionItemWithThisClients, CloseAuction}
 import Owner.{OwnerCommand, SendNextItem}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
@@ -33,7 +33,8 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand]) {
           ownerMailbox ! SendNextItem(context.self)
           Behaviors.same
         case NoMoreItems() =>
-          println("Room " + id + ": Finalizo ejecución")
+          println(f"Room $id: Finalizo ejecución")
+          host ! CloseAuction()
           Behaviors.stopped
       }
     }

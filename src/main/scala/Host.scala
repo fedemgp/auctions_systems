@@ -4,14 +4,9 @@ import akka.actor.typed.{ActorRef, Behavior}
 
 object Host {
   sealed trait HostCommand
-
   final case class AuctionItemWithThisClients(item: Item, clients: List[ActorRef[ClientCommand]]) extends HostCommand
-
   final case class ItemOffer(value: Int, whichClientOffered: ActorRef[ClientCommand]) extends HostCommand
-
   final case class CloseAuction() extends HostCommand
-
-  sealed trait AuctionCommand
 
   def apply(room: ActorRef[RoomCommand]): Behavior[HostCommand] =
     host(room, 0, List.empty)
@@ -37,9 +32,8 @@ object Host {
           }
           host(room, auctionsHosted, clients)
         case CloseAuction() =>
-          room ! FinishedSession()
-          // si hacemos stop aca no hay mas host, o no?
-          Behaviors.same
+          // Este mensaje le llega del room cuando no hay mas items, y debe cerrarse el host
+          Behaviors.stopped
       }
     }
   }
