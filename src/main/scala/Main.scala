@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.Behaviors
 object Main {
 
   val itemsList: List[Item] = List(
-    new Item("Product1", 100),
+    new Item("Product1", 80),
     new Item("Product2", 50))
 
   def main(args: Array[String]): Unit = {

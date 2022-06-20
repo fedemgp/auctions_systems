@@ -10,7 +10,7 @@ final case class AuctionItem(item: Item) extends RoomCommand
 final case class NoMoreItems() extends RoomCommand
 final case class FinishedSession() extends RoomCommand
 
-class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand]) {
+class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var itemsOffered: Int = 0 ) {
   // TODO: hacerlo mas POO a esta clase y mostrar ambas formas de manejar el modelo de actores
   def start(): Behavior[RoomCommand] = Behaviors.setup { context =>
     // TODO: podría agregarse un atributo a pesar de no venir en el constructor?
@@ -56,7 +56,8 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand]) {
       clients
     } else {
       val client_id = clients.length + 1
-      val client = context.spawn(Client(client_id, id), "cliente-" + client_id + id)
+      val client = context.spawn(Client(client_id, id), f"cliente-$client_id-$id-$itemsOffered")
+      itemsOffered += 1
       spawnClients(amount, client :: clients, context)
     }
   }
