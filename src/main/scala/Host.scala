@@ -40,7 +40,7 @@ object Host {
           }
 
           // TODO: agregar corte por tiemout
-          if (newValue > 120) {
+          if (newValue > 90) {
             // TODO: notificarle quien ganó?
             println("[Host] We have a winner!")
             // Last send to close all clients
