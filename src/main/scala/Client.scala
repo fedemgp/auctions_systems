@@ -1,8 +1,6 @@
 import Host.{HostCommand, ItemOffer}
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-
-import scala.util.Random
 
 object Client {
   sealed trait ClientCommand
@@ -27,25 +25,28 @@ object Client {
           // si el cliente no tiene plata suficiente o lo maximo que esta dispuesto a ofertar es menor que el precio
           // del item, entonces no oferta nada
           // 5% de chance por cada
-          if (item.value + betDelta > budget) {
+          if (item.value + betDelta <= budget) {
+            host ! ItemOffer(item.value + betDelta, context.self)
+            //sendRandomOffer(roomId, budget, rng, context, host)
+            offerLogic(clientId, roomId, budget, betDelta)
+          } else {
             println(f"[CLIENT $clientId, from room: $roomId] item ${item.name} is too expensive, i won't offer this")
-            return Behaviors.stopped
+            Behaviors.stopped
           }
-          host ! ItemOffer(item.value + betDelta, context.self)
-          //sendRandomOffer(roomId, budget, rng, context, host)
-          offerLogic(clientId, roomId, budget, betDelta)
         case ItemAt(value, host) =>
           println(f"[CLIENT $clientId, from room: $roomId] new item value is $value")
           // 5% chance of randomly giving up
           //val giveUp = rng.nextFloat() > 0.95
-          if (value + betDelta > budget) {
-            println(f"[CLIENT $clientId, from room: $roomId] i won't continue offering this")
-            return Behaviors.stopped
+          if (value + betDelta <= budget) {
+            val newOffer = value + betDelta
+            host ! ItemOffer(newOffer, context.self)
+            //sendRandomOffer(budget, value, rng, context, host)
+            offerLogic(clientId, roomId, budget, betDelta)
           }
-          val newOffer = value + betDelta
-          host ! ItemOffer(newOffer, context.self)
-          //sendRandomOffer(budget, value, rng, context, host)
-          offerLogic(clientId, roomId, budget, betDelta)
+          else {
+            println(f"[CLIENT $clientId, from room: $roomId] i won't continue offering this")
+            Behaviors.stopped
+          }
         case AuctionEnded() =>
           println(f"[CLIENT $clientId, from room: $roomId] auction ended")
           Behaviors.stopped
