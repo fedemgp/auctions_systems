@@ -66,15 +66,16 @@ object Owner {
      */
     if (notifiedRooms == rooms) {
       println("Fin del owner")
-      return Behaviors.stopped
-    }
-
-    Behaviors.receive { (context, message) =>
-      message match {
-        case SendNextItem(replyTo) =>
-          replyTo ! NoMoreItems()
-          endingProcess(notifiedRooms + 1, rooms)
+      Behaviors.stopped
+    } else {
+      Behaviors.receive { (context, message) =>
+        message match {
+          case SendNextItem(replyTo) =>
+            replyTo ! NoMoreItems()
+            endingProcess(notifiedRooms + 1, rooms)
+        }
       }
     }
+
   }
 }
