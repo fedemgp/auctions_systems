@@ -2,15 +2,13 @@ import akka.NotUsed
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior, Terminated}
 
-object Main {
+object Main extends App {
 
   val itemsList: List[Item] = List(
     new Item("Product1", 80),
     new Item("Product2", 50))
 
-  def main(args: Array[String]): Unit = {
-    ActorSystem(Main(), "ChatRoomDemo")
-  }
+  val chatRoomDemo = ActorSystem(Main(), "ChatRoomDemo")
 
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
