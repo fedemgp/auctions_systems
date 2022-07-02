@@ -1,3 +1,4 @@
+import Client.{AuctionEnded, ClientCommand, ItemAt, StartingOfferOfItemAt}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
@@ -7,8 +8,14 @@ object Host {
   final case class ItemOffer(value: Int, whichClientOffered: ActorRef[ClientCommand]) extends HostCommand
   final case class CloseAuction() extends HostCommand
 
+  private var hostState: HostState = new StartOfferHostState()
+
   def apply(room: ActorRef[RoomCommand]): Behavior[HostCommand] =
     host(room, 0, List.empty)
+
+  def setState(state: HostState): Unit = {
+    hostState = state
+  }
 
   def host(room: ActorRef[RoomCommand], auctionsHosted: Int, clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
     (context, message) => {
@@ -31,33 +38,17 @@ object Host {
   // TODO 2: este metodo debe tener una referencia al que hizo la oferta anterior para compararlo con withClientOffered
   //         e ignorar dos aumentos consecutivos del mismo
   def auctionWithItemAndValue(item: Item, oldValue: Int, auctionsHosted: Int, room: ActorRef[RoomCommand],
-                              clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
-    (context, message) => {
-      message match {
-        case ItemOffer(newValue, whichClientOffered) =>
-          println(f"[Host] New offer from $whichClientOffered")
-          // If the bet is not higher ignore it
-          if (newValue <= oldValue) {
-            println(f"[Host] Repeated offer with value $newValue (old value $oldValue)")
-            whichClientOffered ! ItemAt(oldValue, context.self)
-            auctionWithItemAndValue(item, oldValue, auctionsHosted, room, clients)
-          } else {
-            // TODO: agregar corte por tiemout
-            if (newValue > 300) {
-              // TODO: notificarle quien ganó?
-              println(f"[Host] We have a winner, $whichClientOffered, with an offer of $newValue!!")
-              // Last send to close all clients
-              clients.foreach(_ ! AuctionEnded())
-              // posible race condition?
-              room ! FinishedSession()
-              host(room, auctionsHosted, clients)
-            } else {
-              println(f"[Host] New offer of $newValue")
-              clients.foreach(_ ! ItemAt(newValue, context.self))
-              auctionWithItemAndValue(item, newValue, auctionsHosted, room, clients)
-            }
-          }
+                              clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receiveMessage {
+    case ItemOffer(newValue, whichClientOffered) =>
+      newValue match {
+        case value if value <= oldValue => setState(new WaitingOfferHostState(value, oldValue))
+        case value if value > 90 => setState(new FinishOfferHostState(room, clients))
+        case _ => setState(new NewOfferHostState(newValue, clients))
       }
-    }
+      execute()
+  }
+
+  def execute(): Behavior[HostCommand] = {
+    hostState.execute()
   }
 }
