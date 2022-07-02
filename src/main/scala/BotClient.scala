@@ -43,8 +43,9 @@ object BotClient extends AbstractClient {
        * Si el cliente no puede aumentar aunque sea una unidad la oferta, automaticamente se rinde de la subasta.
        * Con probabilidad de 0.3, puede rendirse aun pudiendo aumentar la oferta
        */
-      if ((itemValue + 1 <= budget) && (rndEngine.nextFloat() > 0.3)) {
-        val newOffer = itemValue +  rndEngine.between(1, budget - itemValue)
+      // si itemValue + 1 == budget => rndEndgine.between(1 ,1) => invalid bounds
+      if ((itemValue + 1 < budget) && (rndEngine.nextFloat() > 0.3)) {
+        val newOffer = itemValue + rndEngine.between(1, budget - itemValue)
         val wait = rndEngine.between(5, 10)
         //println(f"[CLIENT $clientId from room $roomId] waiting $wait seconds until make offer of $newOffer")
         /*

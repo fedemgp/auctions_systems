@@ -1,25 +1,40 @@
 import Host.{HostCommand, ItemOffer}
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.io.StdIn
+import scala.util.Success
 
 object UserClient extends AbstractClient {
 
   override def apply(clientId: Int, roomId: Int): Behavior[ClientCommand] = {
     this.clientId = clientId
     this.roomId = roomId
-    run()
+    run(None)
   }
 
-  def run(): Behavior[ClientCommand] = Behaviors.receive {
+  def run(readFuture: Option[Future[String]]): Behavior[ClientCommand] = Behaviors.receive {
     (context, message) => {
       message match {
         case StartingOfferOfItemAt(item, host) =>
           println(f"[User] Starting offer with initial value ${item.value}.")
-          readCommand(context.self, host)
-        case ItemAt(value, host) =>
-          readCommand(context.self, host)
+          val newReadFuture = readCommand(context.self, host)
+          run(newReadFuture)
+        case ItemAt(_, host) =>
+          readFuture match {
+            case Some(future) =>
+              if (future.isCompleted) {
+                val newReadFuture = readCommand(context.self, host)
+                run(newReadFuture)
+              } else {
+                Behaviors.same
+              }
+            case None =>
+              val newReadFuture = readCommand(context.self, host)
+              run(newReadFuture)
+          }
         case AuctionEnded() =>
           println("[User] Auction ended")
           Behaviors.stopped
@@ -29,24 +44,31 @@ object UserClient extends AbstractClient {
     }
   }
 
-  def readCommand(self: ActorRef[ClientCommand], host: ActorRef[HostCommand]): Behavior[ClientCommand] = {
-    var command = ""
-    do {
-      print("Please, enter new offer or 'surrender' to exit the auction: ")
-      command = StdIn.readLine()
-    } while(!isValid(command))
-
-    if (command == "surrender") {
-      println("Surrendering")
-      surrender()
-    } else {
-      host ! ItemOffer(command.toInt, self)
-      run()
-    }
+  def readCommand(self: ActorRef[ClientCommand], host: ActorRef[HostCommand]): Option[Future[String]] = {
+    val readFuture = Future({
+      var command = ""
+      do {
+        print("Please, enter new offer or 'surrender' to exit the auction: ")
+        command = StdIn.readLine()
+      } while (!isValid(command))
+      command
+    })
+    readFuture.onComplete({
+      case Success(command) =>
+        if (command == "surrender") {
+          println("Surrendering")
+          surrender()
+        } else {
+          host ! ItemOffer(command.toInt, self)
+        }
+      case _ =>
+    })
+    Some(readFuture)
   }
 
+  // ojo, si command == "" => command.forall(Character.isDigit) == True
   def isValid(command: String): Boolean = {
-    val res = (command == "surrender") || (command.forall(Character.isDigit))
+    val res = command.nonEmpty && ((command == "surrender") || command.forall(Character.isDigit))
     res
   }
 }

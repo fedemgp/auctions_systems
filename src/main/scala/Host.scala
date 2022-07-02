@@ -35,15 +35,17 @@ object Host {
     (context, message) => {
       message match {
         case ItemOffer(newValue, whichClientOffered) =>
+          println(f"[Host] New offer from $whichClientOffered")
           // If the bet is not higher ignore it
           if (newValue <= oldValue) {
             println(f"[Host] Repeated offer with value $newValue (old value $oldValue)")
+            whichClientOffered ! ItemAt(oldValue, context.self)
             auctionWithItemAndValue(item, oldValue, auctionsHosted, room, clients)
           } else {
             // TODO: agregar corte por tiemout
-            if (newValue > 90) {
+            if (newValue > 300) {
               // TODO: notificarle quien ganó?
-              println("[Host] We have a winner!")
+              println(f"[Host] We have a winner, $whichClientOffered, with an offer of $newValue!!")
               // Last send to close all clients
               clients.foreach(_ ! AuctionEnded())
               // posible race condition?
