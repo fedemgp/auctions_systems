@@ -1,7 +1,6 @@
-import Owner.SendNextItem
 import akka.NotUsed
-import akka.actor.typed.{ActorSystem, Behavior, Terminated}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorSystem, Behavior, Terminated}
 
 object Main {
 
@@ -15,7 +14,7 @@ object Main {
 
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
-      val owner = context.spawn(Owner(itemsList, 1), "Owner")
+      val owner = context.spawn(Owner(itemsList, 2), "Owner")
       context.watch(owner)
 
       Behaviors.receiveSignal {
