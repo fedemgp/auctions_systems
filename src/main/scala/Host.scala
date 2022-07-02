@@ -1,4 +1,4 @@
-import Client.{AuctionEnded, ClientCommand, ItemAt, StartingOfferOfItemAt}
+import BotClient.{AuctionEnded, ClientCommand, ItemAt, StartingOfferOfItemAt}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
