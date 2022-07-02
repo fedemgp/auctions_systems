@@ -1,5 +1,5 @@
-import Client.ClientCommand
-import Host.{AuctionItemWithThisClients, CloseAuction}
+import BotClient.ClientCommand
+import Host.{AuctionItemWithThisClients, CloseAuction, HostCommand}
 import Owner.{OwnerCommand, SendNextItem}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
@@ -11,9 +11,7 @@ final case class NoMoreItems() extends RoomCommand
 final case class FinishedSession() extends RoomCommand
 
 class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var itemsOffered: Int = 0 ) {
-  // TODO: hacerlo mas POO a esta clase y mostrar ambas formas de manejar el modelo de actores
   def start(): Behavior[RoomCommand] = Behaviors.setup { context =>
-    // TODO: podría agregarse un atributo a pesar de no venir en el constructor?
     val host = context.spawn(Host(context.self), "host-" + id)
     waitingOwnerCommand(host)
   }
@@ -45,7 +43,7 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var ite
       clients
     } else {
       val client_id = clients.length + 1
-      val client = context.spawn(Client(client_id, id), f"cliente-$client_id-$id-$itemsOffered")
+      val client = context.spawn(BotClient(client_id, id), f"cliente-$client_id-$id-$itemsOffered")
       itemsOffered += 1
       spawnClients(amount, client :: clients, context)
     }

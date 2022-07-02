@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import scala.concurrent.duration._
 import scala.util.Random
 
-object Client {
+object BotClient {
   sealed trait ClientCommand
 
   final case class StartingOfferOfItemAt(item: Item, replyTo: ActorRef[HostCommand]) extends ClientCommand
