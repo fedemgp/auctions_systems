@@ -38,17 +38,6 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var ite
     }
     }
 
-  def waitingHostCommand(host: ActorRef[Host.HostCommand]): Behavior[RoomCommand] = Behaviors.receive {
-    (context, message) => {
-      /*
-      message match {
-        case
-      }
-       */
-      Behaviors.same
-    }
-  }
-
   def spawnClients(amount: Int,
                    clients: List[ActorRef[ClientCommand]],
                    context: ActorContext[RoomCommand]): List[ActorRef[ClientCommand]] = {
