@@ -1,4 +1,3 @@
-import BotClient.ClientCommand
 import Host.{AuctionItemWithThisClients, CloseAuction, HostCommand}
 import Owner.{OwnerCommand, SendNextItem}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
@@ -23,7 +22,8 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var ite
           println(f"Room $id: Subasté item ${item.name} ")
           // TODO: hacer N clientes random?
           val clients = spawnClients(2, List.empty, context)
-          host ! AuctionItemWithThisClients(item, clients)
+          val user = context.spawn(UserClient(clients.length + 1, id), f"user-$id-$itemsOffered")
+          host ! AuctionItemWithThisClients(item, user :: clients)
           Behaviors.same
         case FinishedSession() =>
           ownerMailbox ! SendNextItem(context.self)
