@@ -29,6 +29,7 @@ object Host {
       message match {
         case AuctionItemWithThisClients(item, newClients) =>
           clients = newClients
+          println(Console.GREEN + f"[HOST $hostId] Starting offer with initial value ${item.value}" + Console.RESET)
           clients.foreach(_ ! StartingOfferOfItemAt(item, context.self))
           currentOffer = item.value
           auctioningState(item, room)
@@ -48,7 +49,9 @@ object Host {
           println(f"[Host] New offer from $whichClientOffered")
           newValue match {
             case value if value <= currentOffer => setState(new WaitingOfferHostState(value, currentOffer))
-            case _ => setState(new NewOfferHostState(context.self, newValue, clients))
+            case _ =>
+              setState(new NewOfferHostState(context.self, newValue, clients))
+              currentOffer = newValue
           }
           execute()
           waitingOfferState(item, room)

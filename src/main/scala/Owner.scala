@@ -63,7 +63,6 @@ object Owner {
      * que se subastaron todos los items, finaliza su propia ejecución.
      */
     if (notifiedRooms == rooms) {
-      println("Fin del owner")
       Behaviors.stopped
     } else {
       Behaviors.receiveMessage {
