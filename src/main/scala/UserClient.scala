@@ -7,11 +7,9 @@ import scala.concurrent.Future
 import scala.io.StdIn
 import scala.util.Success
 
-object UserClient extends AbstractClient {
+class UserClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roomId) {
 
-  override def apply(clientId: Int, roomId: Int): Behavior[ClientCommand] = {
-    this.clientId = clientId
-    this.roomId = roomId
+  override def apply(): Behavior[ClientCommand] = {
     run(None)
   }
 
@@ -19,7 +17,6 @@ object UserClient extends AbstractClient {
     (context, message) => {
       message match {
         case StartingOfferOfItemAt(item, host) =>
-          println(f"[User] Starting offer with initial value ${item.value}.")
           val newReadFuture = readCommand(context.self, host)
           run(newReadFuture)
         case ItemAt(_, host) =>

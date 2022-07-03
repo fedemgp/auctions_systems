@@ -19,17 +19,15 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var ite
     Behaviors.receive { (context, message) => {
       message match {
         case AuctionItem(item) =>
-          println(f"Room $id: Subasté item ${item.name} ")
           // TODO: hacer N clientes random?
           val clients = spawnClients(2, List.empty, context)
-          val user = context.spawn(UserClient(clients.length + 1, id), f"user-$id-$itemsOffered")
+          val user = context.spawn(new UserClient(clients.length + 1, id)(), f"user-$id-$itemsOffered")
           host ! AuctionItemWithThisClients(item, user :: clients)
           Behaviors.same
         case FinishedSession() =>
           ownerMailbox ! SendNextItem(context.self)
           Behaviors.same
         case NoMoreItems() =>
-          println(f"Room $id: Finalizo ejecución")
           host ! CloseAuction()
           Behaviors.stopped
       }
@@ -43,7 +41,7 @@ class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var ite
       clients
     } else {
       val client_id = clients.length + 1
-      val client = context.spawn(BotClient(client_id, id), f"cliente-$client_id-$id-$itemsOffered")
+      val client = context.spawn(new BotClient(client_id, id)(), f"cliente-$client_id-$id-$itemsOffered")
       itemsOffered += 1
       spawnClients(amount, client :: clients, context)
     }
