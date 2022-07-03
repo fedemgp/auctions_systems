@@ -38,14 +38,18 @@ object Host {
   // TODO 2: este metodo debe tener una referencia al que hizo la oferta anterior para compararlo con withClientOffered
   //         e ignorar dos aumentos consecutivos del mismo
   def auctionWithItemAndValue(item: Item, oldValue: Int, auctionsHosted: Int, room: ActorRef[RoomCommand],
-                              clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receiveMessage {
-    case ItemOffer(newValue, whichClientOffered) =>
-      newValue match {
-        case value if value <= oldValue => setState(new WaitingOfferHostState(value, oldValue))
-        case value if value > 90 => setState(new FinishOfferHostState(room, clients))
-        case _ => setState(new NewOfferHostState(newValue, clients))
+                              clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
+    (context, message) => {
+      message match {
+        case ItemOffer(newValue, whichClientOffered) =>
+          newValue match {
+            case value if value <= oldValue => setState(new WaitingOfferHostState(value, oldValue))
+            case value if value > 90 => setState(new FinishOfferHostState(room, clients))
+            case _ => setState(new NewOfferHostState(context.self, newValue, clients))
+          }
+          execute()
       }
-      execute()
+    }
   }
 
   def execute(): Behavior[HostCommand] = {
