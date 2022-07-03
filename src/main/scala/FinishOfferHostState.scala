@@ -1,4 +1,3 @@
-import Client.{AuctionEnded, ClientCommand}
 import akka.actor.typed.{ActorRef}
 
 class FinishOfferHostState(room: ActorRef[RoomCommand], clients: List[ActorRef[ClientCommand]]) extends HostState {

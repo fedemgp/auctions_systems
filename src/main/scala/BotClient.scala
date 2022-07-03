@@ -51,6 +51,7 @@ object BotClient extends AbstractClient {
         offerLogic()
       } else {
         println(f"[CLIENT $clientId, from room: $roomId] I will stop offering for this item")
+        timers.cancel(f"$clientId-$roomId")
         surrender()
       }
     }
