@@ -42,17 +42,26 @@ object Host {
     (context, message) => {
       message match {
         case ItemOffer(newValue, whichClientOffered) =>
+          var isOfferFinished = false
           newValue match {
             case value if value <= oldValue => setState(new WaitingOfferHostState(value, oldValue))
-            case value if value > 90 => setState(new FinishOfferHostState(room, clients))
+            case value if value > 90 =>
+              setState(new FinishOfferHostState(room, clients))
+              isOfferFinished = true
             case _ => setState(new NewOfferHostState(context.self, newValue, clients))
           }
           execute()
+
+          if (isOfferFinished) {
+            host(room, auctionsHosted, clients)
+          } else {
+            auctionWithItemAndValue(item, oldValue, auctionsHosted, room, clients)
+          }
       }
     }
   }
 
-  def execute(): Behavior[HostCommand] = {
+  def execute(): Unit = {
     hostState.execute()
   }
 }
