@@ -7,7 +7,7 @@ import scala.concurrent.Future
 import scala.io.StdIn
 import scala.util.Success
 
-class UserClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roomId) {
+class UserClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roomId, false) {
 
   override def apply(): Behavior[ClientCommand] = {
     run(None)

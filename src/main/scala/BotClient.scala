@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import scala.concurrent.duration._
 import scala.util.Random
 
-class BotClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roomId) {
+class BotClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roomId, true) {
   val rndEngine: Random = new Random(System.currentTimeMillis)
   var budget: Int = 0
 
@@ -25,7 +25,7 @@ class BotClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roo
           host ! ItemOffer(newOffer, context.self)
           Behaviors.same
         case AuctionEnded() =>
-          println(f"[BOT $clientId] Auction ended")
+          println(f"[Bot $clientId] Auction ended")
           Behaviors.stopped
       }
     }
@@ -49,7 +49,7 @@ class BotClient(clientId: Int, roomId: Int) extends AbstractClient(clientId, roo
         timers.startSingleTimer(f"$clientId-$roomId", MakeOffer(newOffer, host), wait.seconds)
         offerLogic()
       } else {
-        println(f"[BOT $clientId] I will stop offering for this item")
+        println(f"[Bot $clientId] I will stop offering for this item")
         timers.cancel(f"$clientId-$roomId")
         surrender()
       }
