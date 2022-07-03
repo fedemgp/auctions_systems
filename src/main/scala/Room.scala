@@ -11,7 +11,7 @@ final case class FinishedSession() extends RoomCommand
 
 class RoomSession(val id: Int, val ownerMailbox: ActorRef[OwnerCommand], var itemsOffered: Int = 0 ) {
   def start(): Behavior[RoomCommand] = Behaviors.setup { context =>
-    val host = context.spawn(Host(context.self), "host-" + id)
+    val host = context.spawn(Host(id, context.self), "host-" + id)
     waitingOwnerCommand(host)
   }
 

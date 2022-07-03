@@ -48,7 +48,7 @@ object UserClient extends AbstractClient {
     val readFuture = Future({
       var command = ""
       do {
-        print("Please, enter new offer or 'surrender' to exit the auction: ")
+        println(Console.RED + "Please, enter new offer or 'surrender' to exit the auction: " + Console.RESET)
         command = StdIn.readLine()
       } while (!isValid(command))
       command
