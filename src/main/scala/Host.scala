@@ -1,63 +1,77 @@
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 
+import scala.concurrent.duration.DurationInt
+
 object Host {
   sealed trait HostCommand
   final case class AuctionItemWithThisClients(item: Item, clients: List[ActorRef[ClientCommand]]) extends HostCommand
   final case class ItemOffer(value: Int, whichClientOffered: ActorRef[ClientCommand]) extends HostCommand
+  final case class Timeout() extends HostCommand
   final case class CloseAuction() extends HostCommand
 
-  def apply(room: ActorRef[RoomCommand]): Behavior[HostCommand] =
-    host(room, 0, List.empty)
+  private var hostId: Int = 0
+  private var hostState: HostState = new StartOfferHostState()
+  private var clients: List[ActorRef[ClientCommand]] = List.empty
+  private var currentOffer: Int = 0
 
-  def host(room: ActorRef[RoomCommand], auctionsHosted: Int, clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
+  def apply(id: Int, room: ActorRef[RoomCommand]): Behavior[HostCommand] = {
+    hostId = id
+    waitingAuctionState(room)
+  }
+
+  def setState(state: HostState): Unit = {
+    hostState = state
+  }
+
+  def waitingAuctionState(room: ActorRef[RoomCommand]): Behavior[HostCommand] = Behaviors.receive {
     (context, message) => {
       message match {
         case AuctionItemWithThisClients(item, newClients) =>
-          newClients.foreach(_ ! StartingOfferOfItemAt(item, context.self))
-          // podria spawnearse en un child actor con otros behaviours, pero bueno XD
-          val nextAuctionNumber = auctionsHosted + 1
-          auctionWithItemAndValue(item, item.value, auctionsHosted, room, newClients)
+          clients = newClients
+          println(Console.GREEN + f"[HOST $hostId] Starting offer with initial value ${item.value}" + Console.RESET)
+          clients.foreach(_ ! StartingOfferOfItemAt(item, context.self))
+          currentOffer = item.value
+          auctioningState(item, room)
         case CloseAuction() =>
           // Este mensaje le llega del room cuando no hay mas items, y debe cerrarse el host
           Behaviors.stopped
         case _ =>
-          println("Ignoring message")
-          Behaviors.same
+          Behaviors.ignore
       }
     }
   }
-  // TODO: separarlo en dos chld actors distintos, uno que hable con el room y otro con el cliente
-  // TODO 2: este metodo debe tener una referencia al que hizo la oferta anterior para compararlo con withClientOffered
-  //         e ignorar dos aumentos consecutivos del mismo
-  def auctionWithItemAndValue(item: Item, oldValue: Int, auctionsHosted: Int, room: ActorRef[RoomCommand],
-                              clients: List[ActorRef[ClientCommand]]): Behavior[HostCommand] = Behaviors.receive {
+
+  def auctioningState(item: Item, room: ActorRef[RoomCommand]): Behavior[HostCommand] = Behaviors.receive {
     (context, message) => {
       message match {
         case ItemOffer(newValue, whichClientOffered) =>
           println(f"[Host] New offer from $whichClientOffered")
-          // If the bet is not higher ignore it
-          if (newValue <= oldValue) {
-            println(f"[Host] Repeated offer with value $newValue (old value $oldValue)")
-            whichClientOffered ! ItemAt(oldValue, context.self)
-            auctionWithItemAndValue(item, oldValue, auctionsHosted, room, clients)
-          } else {
-            // TODO: agregar corte por tiemout
-            if (newValue > 300) {
-              // TODO: notificarle quien ganó?
-              println(f"[Host] We have a winner, $whichClientOffered, with an offer of $newValue!!")
-              // Last send to close all clients
-              clients.foreach(_ ! AuctionEnded())
-              // posible race condition?
-              room ! FinishedSession()
-              host(room, auctionsHosted, clients)
-            } else {
-              println(f"[Host] New offer of $newValue")
-              clients.foreach(_ ! ItemAt(newValue, context.self))
-              auctionWithItemAndValue(item, newValue, auctionsHosted, room, clients)
-            }
+          newValue match {
+            case value if value <= currentOffer => setState(new WaitingOfferHostState(value, currentOffer))
+            case _ =>
+              setState(new NewOfferHostState(context.self, newValue, clients))
+              currentOffer = newValue
           }
+          execute()
+          waitingOfferState(item, room)
+        case Timeout() =>
+          new FinishOfferHostState(room, clients).execute()
+          waitingAuctionState(room)
+        case _ =>
+          Behaviors.ignore
       }
     }
+  }
+
+  def waitingOfferState(item: Item, room: ActorRef[RoomCommand]): Behavior[HostCommand] = {
+    Behaviors.withTimers[HostCommand] { timers =>
+      timers.startSingleTimer(f"host-$hostId", Timeout(), 7.seconds)
+      auctioningState(item, room)
+    }
+  }
+
+  def execute(): Unit = {
+    hostState.execute()
   }
 }

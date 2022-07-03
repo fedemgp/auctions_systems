@@ -44,18 +44,16 @@ object Owner {
      * salas que lo soliciten el siguiente item a subastar. Cuando se quede sin items a subastar, enviará
      * el primer mensaje NoMoreItems, y cambiará su comportamiendo para ir cerrando las salas.
      */
-    Behaviors.receive { (context, message) =>
-      message match {
-        case SendNextItem(replyTo) =>
-          if (items.nonEmpty) {
-            val remainderItems :+ last = items
-            replyTo ! AuctionItem(last)
-            sendItem(remainderItems, rooms)
-          } else {
-            replyTo ! NoMoreItems()
-            endingProcess(1, rooms)
-          }
-      }
+    Behaviors.receiveMessage {
+      case SendNextItem(replyTo) =>
+        if (items.nonEmpty) {
+          val remainderItems :+ last = items
+          replyTo ! AuctionItem(last)
+          sendItem(remainderItems, rooms)
+        } else {
+          replyTo ! NoMoreItems()
+          endingProcess(1, rooms)
+        }
     }
   }
 
@@ -65,15 +63,12 @@ object Owner {
      * que se subastaron todos los items, finaliza su propia ejecución.
      */
     if (notifiedRooms == rooms) {
-      println("Fin del owner")
       Behaviors.stopped
     } else {
-      Behaviors.receive { (context, message) =>
-        message match {
-          case SendNextItem(replyTo) =>
-            replyTo ! NoMoreItems()
-            endingProcess(notifiedRooms + 1, rooms)
-        }
+      Behaviors.receiveMessage {
+        case SendNextItem(replyTo) =>
+          replyTo ! NoMoreItems()
+          endingProcess(notifiedRooms + 1, rooms)
       }
     }
 
