@@ -14,7 +14,7 @@ object Main {
 
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
-      val owner = context.spawn(Owner(itemsList, 2), "Owner")
+      val owner = context.spawn(Owner(itemsList, 1), "Owner")
       context.watch(owner)
 
       Behaviors.receiveSignal {
